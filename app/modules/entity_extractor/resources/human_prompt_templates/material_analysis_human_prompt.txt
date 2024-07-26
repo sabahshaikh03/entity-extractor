@@ -1,0 +1,3 @@
+Return material and manufacturer information.
+Return the material name, number, CAS and EC numbers for material related information.
+Return manufacturer name, address, city, postal_code, country, state, region. Check section 1, 2 and 3.

@@ -1,0 +1,2 @@
+Return the chemical composition/Ingredients of the material provided.
+Return the composition, tag, CAS and EC number for each ingredient Check section 2 and 3.
