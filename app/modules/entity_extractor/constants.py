@@ -1,78 +1,38 @@
-from utils.dot_access_dict import DotAccessDict
-from utils.import_resources import import_string_resource
+import os
+import dotenv
+
+dotenv.load_dotenv()
 
 
-# TODO: make the blob constants global
+class DotAccessDict(dict):
+    def __getattr__(self, attr):
+        if attr in self:
+            return self[attr]
+        else:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{attr}'"
+            )
+
+
 class EntityExtractorConstants(DotAccessDict):
-    def __init__(self):
-        super().__init__()
-        self.pkg = "app.modules.entity_extractor.resources"
+    # Environment Variables
+    embedding_deployment = os.getenv("EMBEDDING_DEPLOYMENT")
+    llm_deployment = os.getenv("LLM_DEPLOYMENT")
+    azure_openai_endpoint = os.getenv("ENDPOINT")
+    openai_api_version = os.getenv("OPENAI_API_VERSION")
+    azure_openai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    azure_app_insights_connector = os.getenv("APPINSIGHTS_CONNECTION_STRING")
+    neo4j_uri = os.getenv("NEO4J_URI")
+    neo4j_auth = (os.getenv("NEO4J_USER"), os.getenv("NEO4J_PASSWORD"))
 
-        # creating root directory reference for examples (app.modules.entity_extractor.resources)
-        self.examples = f"{self.pkg}.examples"
-        self.examples_files = {
-            "chemical": "chemical_example.json",
-            "material": "material_example.json",
-        }
+    pg_host = os.getenv("PgVectorHost")
+    pg_port = os.getenv("PgVectorPort")
+    pg_user = os.getenv("PgVectorUsername")
+    pg_password = os.getenv("PgVectorPassword")
+    pg_dbname = os.getenv("PgVectorDatabase")
 
-        # creating root directory reference for system prompt templates (app.modules.entity_extractor.resources)
-        self.system = f"{self.pkg}.system_prompt_templates"
-        self.system_prompts_files = {
-            "material": "material_system_prompt.txt",
-        }
-
-        # creating root directory reference for human prompt templates (app.modules.entity_extractor.resources)
-        self.human = f"{self.pkg}.human_prompt_templates"
-        self.human_prompts_files = {
-            "chemical": "chemical_human_prompt.txt",
-            "material": "material_human_prompt.txt",
-        }
-
-        # loading examples
-        self.chemical_example = import_string_resource(
-            self.examples, self.examples_files["chemical"]
-        )
-        self.material_example = import_string_resource(
-            self.examples, self.examples_files["material"]
-        )
-
-        # loading system prompts
-        self.material_system_prompt = import_string_resource(
-            self.system, self.system_prompts_files["material"]
-        )
-
-        # loading human prompts
-        self.material_human_prompt = import_string_resource(
-            self.human, self.human_prompts_files["material"]
-        )
-        self.chemical_human_prompt = import_string_resource(
-            self.human, self.human_prompts_files["chemical"]
-        )
-
-    blob_storage_base_url = "https://vdevdatastorage.blob.core.windows.net"
-    keyword_analysis_blob = {
-        "container": "keywords-analysis-container",
-        "base_path": "keyword_analysis_results/documents",
-    }
-    keyword_analysis_blob = DotAccessDict(keyword_analysis_blob)
-
-    customer_blob = {
-        "container": "customer_blob_container",
-        "base_path": "customer_blob_results/documents",
-    }
-    customer_blob = DotAccessDict(customer_blob)
-
-    global_blob = {
-        "container": "global_blob_container",
-        "base_path": "global_blob_results/documents",
-    }
-    global_blob = DotAccessDict(global_blob)
-
-    text_splitter_breakpoint_threshold_amount = 1.5
-    text_splitter_breakpoint_threshold_type = "interquartile"
-
-    # Example usage
-    material_data = {
+    # Output Example
+    example = {
         "material_name": "Name of material",
         "material_no": "Number of material",
         "manufacturer_name": "Manufacturer's Name",
@@ -101,53 +61,70 @@ class EntityExtractorConstants(DotAccessDict):
             }
         ]
     }
-    # llm_instance invocation
 
-    example = {
-        "material_data": {
-            "material_name": "Silicon",
-            "material_no": "SLS4102, SLS3313",
-            "manufacturer_name": "ScienceLab.com Inc.",
-            "manufacturer_address": "14025 Smith Rd",
-            "manufacturer_city": "Houston",
-            "manufacturer_postal_code": "77396",
-            "manufacturer_country": "USA",
-            "manufacturer_state": "Texas",
-            "manufacturer_region": "Not available",
-            "cas_no": "7440-21-3",
-            "ec_no": "Not available",
-            "chemicals": [
-                {
-                    "chemical_name": "Silicon",
-                    "tag": "Primary",
-                    "cas_no": "7440-21-3",
-                    "composition": "100%",
-                    "ec_no": "Not available"
-                }
-            ]
-        }
-    }
+    # Labels for Named Entity Recognition using GLiNER
+    labels = [
+        "Material Name",
+        "Manufacturer Name",
+        "Manufacturer Address",
+        "Manufacturer Contact",
+        "Created By",
+        "Creation Date",
+        "Revision Date",
+        "Chemical Name",
+        "Chemical Other Information",
+        "CAS Number",
+        "Concentration",
+    ]
 
-    # SYSTEM PROMPT TEMPLATE
+    # Prompts
     template = """
-        Context: You will receive selected chunks from a safety datasheet of a material. Your task is to find the requested information based solely on the provided context. Use the following guidelines:
+    Context: You will receive selected chunks from a safety datasheet of a material. Your task is to find the requested information based solely on the provided context. Use the following guidelines:
 
-        1. Information Extraction:
-           - For material_info, use only the given context to generate answers.
-           - If any information is not in English, translate it and return the translated version.  
-           - In the identification structure, extract name, address, contact, and emergency contact. Do not leave any fields blank, provide an appropriate message if any information is missing.
-           - If the created on date is not mentioned in the MSDS, print an appropriate message. Do not leave the field blank.
+    1. Information Extraction:
+       - For material_info, use only the given context to generate answers.
+       - For chemical_level_toxicity, if specific information for that chemical is not available in the document provided, look up information about that chemical and generate an appropriate answer.
+       - For fields related to toxicity, if information is not available in the context, answer the query by referring to external knowledge.
+       - If any information is not in English, translate it and return the translated version.  
+       - In the identification structure, extract name, address, contact, and emergency contact. Do not leave any fields blank; provide an appropriate message if any information is missing.
+       - If the created on date is not mentioned in the MSDS, print an appropriate message. Do not leave the field blank.
 
-        2. Format:
-           - Return the answer in JSON format.
+    2. Format:
+       - Return the answer in JSON format.
 
-        Expected Output: {example}
+    Expected Output: {example}
 
-        Note: Ensure accuracy and conciseness in the extracted information.
-        """
+    Note: Ensure accuracy and conciseness in the extracted information.
+    """
 
-    # HUMAN QUERY
+    old_prompt = """
+    As a highly skilled chemist specializing in per- and polyfluoroalkyl substances (PFAS) detection, your task is to analyze Material Safety Data Sheets (MSDS) to identify the presence of PFAS in various materials. Your expertise lies in extracting and assessing the chemical composition of each listed component within the material, including the Manufacturer's Name. Your role also involves utilizing your knowledge of PFAS chemistry and regulations to compare identified chemical structures and synonyms against established PFAS databases. You are to classify each component using specific tags denoting its PFAS status: "PFAS": Indicates the presence of one or more identified PFAS chemicals. "Potential PFAS": Suggests the presence of structures or synonyms indicative of PFAS, requiring further investigation for confirmation. "NO_PFAS": Signifies the absence of any known PFAS within the component. Your output should be in pure JSON format, following the specified structure: {"material_name":"Name of material","material_no":"Number of material","manufacturer_name":"Manufacturer's Name","manufacturer_address":"Manufacturer's Address","manufacturer_city":"Manufacturer's City","manufacturer_postal_code":"Manufacturer's Postal Code","manufacturer_country":"Manufacturer's Country","manufacturer_state":"Manufacturer's State","manufacturer_region":"Manufacturer's Region","cas_no":"CAS Number of material","ec_no":"EC Number of chemical","chemicals":[{"chemical_name":"Name of chemical","tag":"[Tag]","cas_no":"CAS Number of chemical","composition":"Chemical composition of chemical","ec_no":"EC Number of chemical"},{"chemical_name":"Name of chemical","tag":"[Tag]","cas_no":"CAS Number of chemical","composition":"Chemical composition of chemical","ec_no":"EC Number of chemical"}]} Please note: Do not provide any other information beyond the requested format. Provide the information in JSON format and keys should be fixed as mentioned above. Content: CONTENT
+    """
+
     human_query = "context: {docs}, query: {query}"
 
-    material_prompt = "Return material identification information and last date of revision. Check section 1."
+    order = [
+        "document_name",
+        "identification",
+        "material_composition",
+        "total_tokens",
+        "total_cost"
+    ]
+
+    # prompts
+    identification_prompt = "Return material identification information and last date of revision. Check section 1."
     chemical_composition_prompt = "Return the chemical composition/Ingredients of the material provided. Check section 3 or 2."
+    toxicological_info_prompt = "Return toxicological information. Check section 11."
+
+    # chunking parameters
+
+    # semantic
+    text_splitter_breakpoint_threshold_type = "interquartile"
+    text_splitter_breakpoint_threshold_amount = 1.5
+
+    # recursive chunking parameters
+    chunk_size = 2000
+    overlap = 200
+
+    # fast tokenizer
+    chunk_token_limit = 3072

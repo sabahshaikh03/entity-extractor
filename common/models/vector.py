@@ -1,12 +1,11 @@
 from sqlalchemy import create_engine, String, Column, Integer, Text, JSON, BigInteger, Boolean
-import uuid
 from common.mysql_declarative_base import Base
 from pgvector.sqlalchemy import Vector
 
 
 class Vector(Base):
     __tablename__ = 'vectors'
-    id = Column(String(64), primary_key=True, default=str(uuid.uuid4()).replace('-', ''))
+    id = Column(String(64), primary_key=True)
     embedding = Column(Vector(3072), nullable=False)
     enabled = Column(Integer)
     genre = Column(String)
