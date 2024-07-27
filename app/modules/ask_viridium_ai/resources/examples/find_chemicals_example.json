@@ -1,0 +1,6 @@
+{
+        "product_name": "TRIM TC 184B",
+        "chemicals": [{"name": "Severely Hydrotreated Petroleum Oil", "cas_no": "64742-65-0",
+                       "source": "https://www.example_url.com/MSDS/MSDS00007/01790583-20110708.PDF"}],
+        "confidence": 0.85
+}

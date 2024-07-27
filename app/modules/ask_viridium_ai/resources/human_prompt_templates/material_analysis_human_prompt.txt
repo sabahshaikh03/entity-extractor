@@ -1,0 +1,1 @@
+Material Name: {material}, manufactured by {manufacturer}. Its chemical composition is: {chemical_composition}

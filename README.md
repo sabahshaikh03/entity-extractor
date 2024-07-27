@@ -1,1 +1,1 @@
-# entity-extractor
+# viridium-ai-service

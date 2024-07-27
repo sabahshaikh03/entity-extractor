@@ -1,0 +1,16 @@
+{
+        "analyzed_material": "0652-W Nylon/ 30655-W nylon with CPT Sealant",
+        "composition": "Nylon, CPT Sealant",
+        "analysis_method": "Literature review, trade name association",
+        "decision": "PFAS (No)",
+        "confidence_score": 0.90,
+        "primary_reason": "Nylon is a polymer that does not contain PFAS. CPT Sealant does not typically contain PFAS based on available information.",
+        "secondary_reason": null,
+        "evidence": ["Trade name association with nylon, which is a non-PFAS material",
+                     "Lack of information suggesting PFAS presence in CPT Sealant"],
+        "health_problems": ["Could lead to asphyxia", "Linked to cancer"],
+        "confidence_level": "High",
+        "recommendation": "No further investigation is needed as the analyzed materials are not expected to contain PFAS.",
+        "suggestion": null,
+        "limitations_and_uncertainties": null
+}
